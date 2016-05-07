@@ -14,53 +14,69 @@ bool GestureRecognition::initialise()
 {
     _upperLimit = 5;
     _lowerLimit = 1;
+    _fingerCountLast = 0;
     //Serial.println("New Gesture Recognition Object...");
     return 1;
-    }
+}
 
 void GestureRecognition::addEvent(const struct touchScreenEvent &event)
 {
-
+    
+    
 	_fingerCount = event.numberOfFingers;
-	if (_fingerCount != _fingerCountLast)
-	{
-		_clearFinger(_finger1);
-		//_clearFinger(_finger2);
-        // Furtue
-        /*_clearFinger(_finger3);
-		_clearFinger(_finger4);
-		_clearFinger(_finger5);*/
-		_fingerCountLast = _fingerCount;
-		Serial.println("");
-	}
+	//Serial.printf("Count: %d, Last Count: %d, ", _fingerCount, _fingerCountLast);
 	// Add Gesture Event to Stack
-	switch (_fingerCount){
+	switch (_fingerCount) {
 		case 0:
-			// TODO: Do we need to do something here???
-			// Clear flags
-			/*up = 0;
-			down = 0;
-			right = 0;
-			left = 0;
-			up2 = 0;
-			down2 = 0;
-			hold = 0;*/
+		    //Serial.printlnf("   Case: 0");
+		    switch (_fingerCountLast) {
+    			case 1:
+    			    //Serial.printlnf("       Case: 1");
+    			    _finger1.touch = false;
+    			    // Debug
+                    Serial.printlnf("   Touch: %d, Last Touch: %d",_finger1.touch, _finger1.lastTouch);
+    			    _evaluateFinger(_finger1);
+    			    break;
+    			case 2:
+    			    _finger2.touch = false;
+    			    _evaluateFinger(_finger2);
+        			break;
+    			case 3:
+    			    _finger3.touch = false;
+    			    _evaluateFinger(_finger3);
+    			    break;
+    			case 4:
+    			    _finger4.touch = false;
+    			    _evaluateFinger(_finger4);
+    			    break;
+    			case 5:
+    			    _finger5.touch = false;
+    			    _evaluateFinger(_finger5);
+    			    break;
+                default:
+                    Serial.printlnf("       defalut: ");
+                    Serial.printlnf("           Last Finger Count: %d", _fingerCountLast);
+                    break;
+		    }
 			break;
 		case 1:
+		    _finger1.touch = true;
 			_finger1.x = event.fingerPositions[0].x;
 			_finger1.y = event.fingerPositions[0].y;
-			_finger1.timeStamp = event.timeStamp;
+			_finger1.time = event.timeStamp;
+			// Debug
+            Serial.printlnf("   Touch: %d, Last Touch: %d",_finger1.touch, _finger1.lastTouch);
 			_evaluateFinger(_finger1);
 			break;
 		case 2:
 			_finger1.x = event.fingerPositions[0].x;
 			_finger1.y = event.fingerPositions[0].y;
-			_finger1.timeStamp = event.timeStamp;
-			_evaluateFinger(_finger1);
+			_finger1.time = event.timeStamp;
+			//_evaluateFinger(_finger1);
 			_finger2.x = event.fingerPositions[1].x;
 			_finger2.y = event.fingerPositions[1].y;
-			_finger2.timeStamp = event.timeStamp;
-			_evaluateFinger(_finger2);
+			_finger2.time = event.timeStamp;
+			_evaluate2Fingers(_finger2, _finger2);
 			break;
 		case 3:
 		case 4:
@@ -69,321 +85,174 @@ void GestureRecognition::addEvent(const struct touchScreenEvent &event)
 		default:
 			break;
 	}
-
-	// Try to Recognise Gesture
-	_recognise();
-};
-
-void GestureRecognition::update()
-{
-    //uint32_t now = millis();
-    _decay(_finger1);
-    _decay(_finger2);
-    // Furtue
-    /*_decay(_finger3);
-    _decay(_finger4);
-    _decay(_finger5);*/
-    
-    //TODO: Check for tap/click and double tap/click
-    _checkTap(_finger1);
-    
-    if (_finger1.tap)
-    {
-        _finger1.tap = 0;
-        tap = 1;
-    }
-    
-    if (_finger1.doubleTap)
-    {
-        _finger1.doubleTap = 0;
-        doubleTap = 1;
-    }
-    
-    lastUpdate = millis();
+	_fingerCountLast = _fingerCount;
 }
 
-void GestureRecognition::_checkTap(struct _finger &finger)
+void GestureRecognition::update(uint32_t now)
 {
-    uint32_t now = millis();
-    // Set Tap or Double Tap
-    if (now - 250 > finger.touchEndTimeStamp)
+    if(_finger1.touch == false && _finger1.doubleTapWaiting == true &&  _finger1.tapOK == true)
     {
-        if(finger.tapWaiting)
-        {
-            Serial.println("Set Tap...");
-            finger.tap = 1;
-            finger.tapWaiting = 0;
-        } else if (finger.doubleTapWaiting)
-        {
-            Serial.println("Set Double Tap...");
-            finger.doubleTap = 1;
-            finger.doubleTapWaiting = 0;
-        }
+        _finger1.time = now;
+        _evaluateFinger(_finger1);
     }
-    
 }
 
-void GestureRecognition::_decay(struct _finger &finger)
+void GestureRecognition::_evaluate2Fingers(struct _finger1 &finger1, struct _finger2 &finger2)
 {
-    uint32_t now = millis();
     
-    if((now - 100) > finger.timeStampLast)
-    {
-        finger.up--;
-        finger.down--;
-        finger.right--;
-        finger.left--;
-        finger.hold--;
-    }
-    
-    if (finger.up > _upperLimit) {finger.up = _upperLimit;}
-    if (finger.down > _upperLimit) {finger.down = _upperLimit;}
-    if (finger.right > _upperLimit) {finger.right = _upperLimit;}
-    if (finger.left > _upperLimit) {finger.left = _upperLimit;}
-    if (finger.hold > _upperLimit) {finger.hold = _upperLimit;}
-    
-    if (finger.up < _lowerLimit) {finger.up = _lowerLimit;}
-    if (finger.down < _lowerLimit) {finger.down = _lowerLimit;}
-    if (finger.right < _lowerLimit) {finger.right = _lowerLimit;}
-    if (finger.left < _lowerLimit) {finger.left = _lowerLimit;}
-    if (finger.hold < _lowerLimit) {finger.hold = _lowerLimit;}
-
 }
 
 void GestureRecognition::_evaluateFinger(struct _finger &finger)
 {
-	// Serial.println("Evaluating a Finger...");
-	#if _DEBUG > 2
-	    Serial.printf("Evaluate Finger... Up: %d, Down: %d, Right: %d, Left: %d, Hold: %d, ", finger.up, finger.down, finger.right, finger.left, finger.hold);
-	#endif
-	int32_t xDelta;
-	int32_t yDelta;
-	int32_t timeDelta;
 
-	xDelta = finger.x - finger.xLast;
-	yDelta = finger.y - finger.yLast;
-	timeDelta = finger.timeStamp - finger.timeStampLast;
-	finger.touchEndTimeStamp = millis();
-	
-	#if _DEBUG > 2
-	    Serial.printlnf("xDelta: %d, yDelta: %d, timeDelta: %d, x: %d, y: %d", xDelta, yDelta, timeDelta, finger.x, finger.y);
-	#endif
-
-    if (abs(xDelta) > abs(yDelta))
+	float deltaX;
+	float deltaY;
+	float distance;
+	float angle;
+	float velocity;
+	float velocityX;
+	float velocityY;
+	int32_t deltaTime;
+    
+    // Check for first touch
+    if(finger.touch == true && finger.lastTouch == false && (finger.time - finger.lastTime) > debounceTime)
     {
-        // Evaluate the X directions
-        if (xDelta > 0)
+        finger.startTime = finger.time;
+        finger.ignoreUp = false;
+        finger.waitForUp = false;
+        finger.tapOK = true;
+        // Enable Double Tap
+        if((finger.time-finger.lastTime) < doubleTapGapTime && finger.doubleTapOnUp == false && finger.doubleTapWaiting == true)
         {
-            // We are moving down
-            finger.left++;
-            // Hold & Up decay
-            finger.hold--;
-            finger.right--;
-        }else{
-            // We are moving up
-            finger.right++;
-            // Hold & down decay
-            finger.hold--;
-            finger.left--;
+            Serial.printlnf("       Second touch...");
+            finger.doubleTapOnUp = true;
+        } else {
+            Serial.printlnf("       First touch...");
+            finger.doubleTapOnUp = false;
         }
-
-        // Calculate speed of the X direction pixels/s
-        if (timeDelta !=0){
-            finger.xSpeed = abs(xDelta * 1000 / timeDelta);
-        }
-    }else if (abs(xDelta) < abs(yDelta)) {
-      // Evaluate the Y directions
-      	if (yDelta > 0)
-      	{
-      		// We are moving right
-      		finger.down++;
-      		// Hold & left decay
-      	    finger.hold--;
-      		finger.up--;
-      	}else{
-      		// We are moving left
-      		finger.up++;
-      		// Hold & right decay
-      		finger.hold--;
-      		finger.down--;
-      	}
-
-        // Calculate speed of the Y direction pixels/s
-        if (timeDelta !=0){
-            finger.ySpeed = abs(yDelta * 1000 / timeDelta);
+        finger.doubleTapWaiting = false;
+        
+        finger.xLast = finger.x;
+        finger.yLast = finger.y;
+        
+    // Screen released
+    } else if (finger.touch == false && finger.lastTouch == true && (finger.time - finger.startTime) > debounceTime) {
+        if (finger.ignoreUp == false)
+        {
+            finger.lastTime = finger.time;
+            if(finger.doubleTapOnUp == false)
+            {
+                Serial.printlnf("       Waiting for a second tap...");
+                finger.doubleTapWaiting = true;
+            } else {
+                Serial.printlnf("       Setting double tap...");
+                setDoubleTap(true);
+                finger.doubleTapOnUp = false;
+                finger.doubleTapWaiting = false;
+                finger.tapOK = false;
+            }
         }
     }
-
-    // Evaluate a hold
-    if (abs(xDelta) < 1 && abs(yDelta) < 1)
+    
+    
+    deltaX = finger.x - finger.xLast;
+	deltaY = finger.y - finger.yLast;
+	deltaTime = finger.time - finger.startTime;
+	
+	distance = sqrt((deltaX * deltaX) + (deltaY * deltaY));
+	angle = atan2(deltaY, deltaX) * 360 / M_PI;
+    velocity = distance / deltaTime;
+    velocityX = deltaX / deltaTime;
+    velocityY = deltaY / deltaTime;
+    
+    //Serial.printlnf("Delta X: %f, Delta Y: %f, Delta Time: %d, Distance: %f, Angle: %f, Velocity: %f, VelocityX: %f, VelocityY: %f", deltaX, deltaY, deltaTime, distance, angle, velocity, velocityX, velocityY);
+    
+    // Test for movement
+    if(finger.touch == true && finger.distance > 0.5 && finger.moving == false)
     {
-        finger.hold++;
-        finger.up--;
-        finger.down--;
-        finger.right--;
-        finger.left--;
-    } else {
-        finger.hold--;
+        Serial.println("        Setting Moving...");
+        finger.moving = true;
     }
     
-    // Set upper 
-    if (finger.down > _upperLimit) {finger.down = _upperLimit;}
-    if (finger.up > _upperLimit) {finger.up = _upperLimit;}
-    if (finger.right > _upperLimit) {finger.right = _upperLimit;}
-    if (finger.left > _upperLimit) {finger.left = _upperLimit;}
-    if (finger.hold > _upperLimit) {finger.hold = _upperLimit;}
-    // Set lower limits
-    if (finger.down < _lowerLimit) {finger.down = _lowerLimit;}
-    if (finger.up < _lowerLimit) {finger.up = _lowerLimit;}
-    if (finger.right < _lowerLimit) {finger.right = _lowerLimit;}
-    if (finger.left < _lowerLimit) {finger.left = _lowerLimit;}
-    if (finger.hold < _lowerLimit) {finger.hold = _lowerLimit;}
+    // Test for tap
+    if(finger.touch == false && (finger.time-finger.lastTime) >= doubleTapGapTime && finger.doubleTapWaiting == true && finger.doubleTapOnUp == false && finger.tapOK == true)
+    {
+        Serial.println("        Setting Tap...");
+        setTap(true);
+        finger.doubleTapWaiting = false;
+    }
     
-    // Update Last
+    // Test for Hold
+    if(finger.touch == true && hold == false && (finger.time - finger.startTime) > holdTime)
+    {
+        Serial.println("        Setting Hold...");
+        setHold(true);
+        finger.waitForUp = true;
+        finger.ignoreUp = true;
+        finger.doubleTapOnUp = false;
+        finger.doubleTapWaiting = false;
+        //finger.held = true;
+    }
+    
+    // Set last states
+    finger.lastTouch = finger.touch;
     finger.xLast = finger.x;
     finger.yLast = finger.y;
-    finger.xSpeedLast = finger.xSpeed;
-    finger.ySpeedLast = finger.ySpeed;
-    finger.timeStampLast = finger.timeStamp;
-    
+
 }
 
-void GestureRecognition::_clearFinger(struct _finger &finger)
+void GestureRecognition::_printFinger(struct _finger &finger)
 {
-    uint32_t now = millis();
-    
-	finger.x = 0;
-	finger.xLast = 0;
-	finger.y = 0;
-	finger.yLast = 0;
-	finger.xSpeed = 0;
-	finger.xSpeedLast = 0;
-	finger.ySpeed = 0;
-	finger.ySpeedLast = 0;
-	finger.timeStamp = 0;
-	finger.timeStampLast = 0;
-	finger.touchBegin = 0;
-	finger.touchEnd = 1;
-	
-	if (now - 150 > finger.touchEndTimeStamp && finger.tapWaiting)
-	{
-	    Serial.println("Double Tap Waiting Set...");
-	    finger.tapWaiting = 0;
-	    finger.doubleTapWaiting = 1;
-	} else {
-	    Serial.println("Tap Waiting Set...");
-	    finger.tapWaiting = 1;
-	    finger.doubleTapWaiting = 0;
-	}
-	
-    //finger.touchEndTimeStamp = millis();
-	finger.up = _lowerLimit;
-	finger.down = _lowerLimit;
-	finger.right = _lowerLimit;
-	finger.left = _lowerLimit;
-	finger.hold = _lowerLimit;
+    Serial.printlnf("   touch: %s", finger.touch ? "true" : "false");
+    Serial.printlnf("   lastTouch: %s", finger.lastTouch ? "true" : "false");
+    Serial.printlnf("   tapOK: %s", finger.tapOK ? "true" : "false");
+    Serial.printlnf("   waitForUp: %s", finger.waitForUp ? "true" : "false");
+    Serial.printlnf("   ignoreUp: %s", finger.ignoreUp ? "true" : "false");
+    Serial.printlnf("   doubleTapOnUp: %s", finger.doubleTapOnUp ? "true" : "false");
+    Serial.printlnf("   doubleTapWaiting: %s", finger.doubleTapWaiting ? "true" : "false");
+    Serial.printlnf("   held: %s", finger.held ? "true" : "false");
+    Serial.printlnf("   moving: %s", finger.moving ? "true" : "false");
+    Serial.printlnf("   xFirst: %d", finger.xFirst);
+    Serial.printlnf("   x: %d", finger.x);
+    Serial.printlnf("   xLast: %d", finger.xLast);
+    Serial.printlnf("   yFirst: %d", finger.yFirst);
+    Serial.printlnf("   y: %d", finger.y);
+    Serial.printlnf("   yLast: %d", finger.yLast);
+    Serial.printlnf("   firstTime: %d", finger.firstTime);
+    Serial.printlnf("   time: %d", finger.time);
+    Serial.printlnf("   lastTime: %d", finger.lastTime);
+    Serial.printlnf("   startTime: %d", finger.startTime);
+    Serial.printlnf("   distance: %f", finger.distance);
+    Serial.printlnf("   angle: %f", finger.angle);
+    Serial.printlnf("   velocity: %f", finger.velocity);
 }
 
-void GestureRecognition::_recognise()
+void GestureRecognition::setTap(bool state)
 {
-	// TODO:
-	// flick left or right
-	// Tap
-	// Double Tap
+    tap = state;
+}
 
-    uint8_t thresholdHigh = 4;
-    uint8_t thresholdLow = 2;
+bool GestureRecognition::getTap()
+{
+    return tap;
+}
 
-	// How many finger gesture is this
-	switch (_fingerCount)
-	{
-		case 0:
-			// TODO:
-			// What just ended? Check Flags and see if we justed Tap and could be going for a double tap
-			break;
-		case 1:
-			// Are we swiping down
-			if (_finger1.down > thresholdHigh)
-			{
-				down = 1;
-				downSpeed = _finger1.ySpeed;
-			}else if(_finger1.down < thresholdLow)
-			{
-				down = 0;
-				downSpeed = 0;
-			}
-			// Are we swiping up
-			if (_finger1.up > thresholdHigh)
-			{
-				up = 1;
-				upSpeed = _finger1.ySpeed;
-			}else if(_finger1.up < thresholdLow)
-			{
-				up = 0;
-				upSpeed = 0;
-			}
-			// Are we swiping left
-			if (_finger1.left > thresholdHigh)
-			{
-				left = 1;
-				leftSpeed = _finger1.xSpeed;
-			}else if(_finger1.left < thresholdLow)
-			{
-				left = 0;
-				leftSpeed = 0;
-			}
-			// Are we swiping right
-			if (_finger1.right > thresholdHigh)
-			{
-				right = 1;
-				rightSpeed = _finger1.xSpeed;
-			}else if(_finger1.right < thresholdLow)
-			{
-				right = 0;
-				rightSpeed = 0;
-			}
-			// TODO:
-			// Are we doing a single tap
-			// TODO:
-			// Are we doing a double tap
-			// TODO:
-			// Are we just holding
-            if (_finger1.hold > thresholdHigh)
-            {
-                hold = 1;
-            }else if(_finger1.hold < thresholdLow)
-            {
-                hold = 0;
-            }
-			break;
-		case 2:
-			// Are we swiping down
-			if (_finger1.down > thresholdHigh && _finger2.down > thresholdHigh)
-			{
-				down2 = 1;
-				down2Speed = (_finger1.ySpeed + _finger2.ySpeed) / 2;
-			}else if(_finger1.down < thresholdLow || _finger2.down < thresholdLow)
-			{
-				down2 = 0;
-				down2Speed = 0;
-			}
-			// Are we swiping up
-			if (_finger1.up > thresholdHigh && _finger2.up > thresholdHigh)
-			{
-				up2 = 1;
-				up2Speed = (_finger1.ySpeed + _finger2.ySpeed) / 2;
-			}else if(_finger1.up < thresholdLow || _finger2.up < thresholdLow)
-			{
-				up2 = 0;
-				up2Speed = 0;
-			}
-			// TODO:
-			// Are we touching adjacent corners
-			// TODO:
-			// Are we just holding
-			break;
-		default:
-			// Don't really care for now
-			break;
-	}
-};
+void GestureRecognition::setDoubleTap(bool state)
+{
+    doubleTap = state;
+}
+
+bool GestureRecognition::getDoubleTap()
+{
+    return doubleTap;
+}
+
+void GestureRecognition::setHold(bool state)
+{
+    hold = state;
+}
+
+bool GestureRecognition::getHold()
+{
+    return hold;
+}

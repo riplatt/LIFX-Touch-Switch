@@ -5,11 +5,29 @@
 
 device::device()
 {
-    /* debug serial interface */
+
 };
+
+void device::setUDP(UDP &udpRef)
+{
+    Serial.printlnf("device setUDP...");
+    _deviceUdp = udpRef;
+}
+
+void device::setBroadcastIP(IPAddress broadcastIP)
+{
+    Serial.printlnf("device setBroadcastIP...");
+    _broadcastIP = broadcastIP;   
+}
+void device::setRemotePort(uint16_t remotePort)
+{
+    Serial.printlnf("device setRemotePort...");
+    _remotePort = remotePort;
+}
 
 void device::getService()
 {
+    //Serial.printlnf("device getService...");
     /* header */
     Header header = Header();
     int headerSize = sizeof(header);
@@ -46,7 +64,7 @@ void device::getService()
     //header.res_required = 0;
     //header.sequence = 0;
     //header.reservedC = 0;
-    header.type = _getService;
+    header.type = _deviceGetService;
     //header.reservedD = 0;
     
     /* build payload */
@@ -57,14 +75,19 @@ void device::getService()
     
     /* Send UDP Packet */
     // TODO
-    #if DEBUG > 0
-        Serial.printf("Deivce getService - UDP: ")
-        for(int i = 0; i < sizeof(udpPacket); i++)
+    if (WiFi.ready()) {
+        _deviceUdp.beginPacket(_broadcastIP, _remotePort);
+        _deviceUdp.write(udpPacket, sizeof(udpPacket));
+        _deviceUdp.endPacket();
+    }
+
+    #if _DEBUG > 2
+        Serial.printf("Deivce getService - UDP: ");
+        for(uint8_t i = 0; i < sizeof(udpPacket); i++ )
         {
             Serial.printf("0x%02x ", udpPacket[i]);
         }
-        Serial.println(";
+        Serial.println("");
     #endif
 
 };
-

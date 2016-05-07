@@ -31,38 +31,41 @@
             GestureRecognition();
             bool initialise();
             void addEvent(const struct touchScreenEvent &event);
-            void update();
-            // TODO: Look at doing set get functions for flags??
-            /*
+            void update(uint32_t now);
+
+            void setDoubleTap(bool state);
+            bool getDoubleTap();
+            void setHold(bool state);
+            bool getHold();
             void setTap(bool state);
-            void getTap(bool state);
-            */
+            bool getTap();
+            
 		private:
             /* Members */
             struct _finger
             {
-                uint16_t x;
-                uint16_t xLast;
-                uint16_t y;
-                uint16_t yLast;
-                uint16_t xSpeed;
-                uint16_t xSpeedLast;
-                uint16_t ySpeed;
-                uint16_t ySpeedLast;
-                uint32_t timeStamp;
-                uint32_t timeStampLast;
-                bool touchBegin;
-                bool touchEnd;
-                bool tapWaiting;
-                bool tap;
+                bool touch;
+                bool lastTouch;
+                bool tapOK;
+                bool waitForUp;
+                bool ignoreUp;
+                bool doubleTapOnUp;
                 bool doubleTapWaiting;
-                bool doubleTap;
-                uint32_t touchEndTimeStamp;
-                int8_t up;
-                int8_t down;
-                int8_t right;
-                int8_t left;
-                int8_t hold;
+                bool held;
+                bool moving;
+                uint16_t xFirst;
+                uint16_t x;
+                uint16_t xLast ;
+                uint16_t yFirst;
+                uint16_t y;
+                uint16_t yLast ;
+                uint16_t firstTime;
+                uint32_t time;
+                uint32_t lastTime;
+                uint32_t startTime;
+                float distance;
+                float angle;
+                float velocity;
             };
             bool _singleTapWaiting;
             bool _doubleTapWaiting;
@@ -75,13 +78,18 @@
             struct _finger _finger3 = _finger();
             struct _finger _finger4 = _finger();
             struct _finger _finger5 = _finger();
+            // Button timing variables
+            uint16_t debounceTime = 15;
+            uint16_t doubleTapGapTime = 250;  
+            uint16_t holdTime = 750;
             
             /* Members Functions */
             void _checkTap(struct _finger &finger);
             void _decay(struct _finger &finger);
             void _evaluateFinger(struct _finger &finger);
-            void _clearFinger(struct _finger &finger);
+            void _evaluate2Fingers(struct _finger1 &finger1, struct _finger2 &finger2)
             void _recognise();
+            void _printFinger(struct _finger &finger);
 	};
 
 #endif

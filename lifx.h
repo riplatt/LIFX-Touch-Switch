@@ -13,6 +13,9 @@
         public:
         	/* Members Functions */
         	lifx();
+        	void setUDP(UDP &udpRef);
+            void setBroadcastIP(IPAddress broadcastIP);
+            void setRemotePort(uint16_t remotePort);
         	void discover();					                // Find active lights
         	void addLight(uint8_t mac[6], uint32_t port);		// Add light to Lights vector by mac address
         	void removeLight(uint8_t mac[6]);	                // Remove light from Lights vector by mac address
@@ -20,20 +23,23 @@
         	void toggleColor();					                // Change currently selected light/s from color to white
         	void cycleColor();				                	// Change color/temperature of currently selected light/s
         	void dimLights();					                // Change the brightness of currently selected light/s
-        	void msgIn();                                       // UDP message in
+        	void getStatus();                                   // Get status of lights 
+        	void msgIn(uint8_t packetBuffer[128]);              // UDP message in
         
         
         	/* Members */
-        	device Device;
             light Lights[16];
-            int numberOfLights = 0;  // The current number of lights under control
+            uint8_t numberOfLights = 0;  // The current number of lights under control
         
         private:
         	/* Members Functions */
-        	boolean _byteArrayCompare(byte a[], byte b[], int arraySize);
-        
+
         	/* Members */
         	bool _powerState;					// 1 := Lights On, 0 := Lights Off
+        	device _device;
+        	UDP _lifxUdp;
+        	IPAddress _broadcastIP;
+        	uint16_t _remotePort;
     
     
     };
