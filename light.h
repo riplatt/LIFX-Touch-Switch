@@ -86,9 +86,9 @@
         private:
             Lamp _lamp;
             IPAddress _broadcastIP;
-        	uint16_t _remotePort;
-        	uint16_t _powerState;
-        	UDP _lightUdp;
+            uint16_t _remotePort;
+            uint16_t _powerState;
+            UDP _lightUdp;
             
     
     };

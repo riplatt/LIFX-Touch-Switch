@@ -15,6 +15,7 @@
             void setBroadcastIP(IPAddress broadcastIP);
             void setRemotePort(uint16_t remotePort);
             void getService();
+            void getPower();
             
             /* Members */
             struct Header
@@ -45,7 +46,7 @@
             /* Members */
             UDP _deviceUdp;
             IPAddress _broadcastIP;
-        	uint16_t _remotePort;
+            uint16_t _remotePort;
             
     };
 

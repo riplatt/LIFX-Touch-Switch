@@ -69,7 +69,7 @@ void light::get()
     header.tagged = 0;            
     header.addressable = 1;       
     header.protocol = 1024;       
-    //header.source = 0;
+    header.source = _myID;
     header.target[0] = _lamp.mac[0];
     header.target[1] = _lamp.mac[1];
     header.target[2] = _lamp.mac[2];
@@ -105,6 +105,8 @@ void light::get()
         _lightUdp.beginPacket(_broadcastIP, _lamp.port);
         _lightUdp.write(udpPacket, sizeof(udpPacket));
         _lightUdp.endPacket();
+        _msgSentTime = millis();
+        _msgSent = true;
     }
     
     #if _DEBUG
@@ -156,7 +158,7 @@ void light::setColor(uint16_t hue, uint16_t saturation, uint16_t brightness, uin
     header.tagged = 0;            
     header.addressable = 1;       
     header.protocol = 1024;       
-    //header.source = 0;
+    header.source = _myID;
     header.target[0] = _lamp.mac[0];
     header.target[1] = _lamp.mac[1];
     header.target[2] = _lamp.mac[2];
@@ -212,6 +214,15 @@ void light::setColor(uint16_t hue, uint16_t saturation, uint16_t brightness, uin
     
     /* Send UDP Packet */
     // TODO
+    if (WiFi.ready()) {
+        Serial.printlnf("Light setColor - Sending UDP to 192.168.1.255:%d", _lamp.port);
+        _lightUdp.beginPacket(_broadcastIP, _lamp.port);
+        _lightUdp.write(udpPacket, sizeof(udpPacket));
+        _lightUdp.endPacket();
+        _msgSentTime = millis();
+        _msgSent = true;
+    }
+    
     #if _DEBUG
         Serial.printf("Light setPower - UDP: 0x");
         for(uint8_t i = 0; i < sizeof(udpPacket); i++)
@@ -250,7 +261,7 @@ void light::setPower(uint16_t level, uint32_t duration)
     header.tagged = 0;            
     header.addressable = 1;       
     header.protocol = 1024;       
-    //header.source = 0;
+    header.source = _myID;
     header.target[0] = _lamp.mac[0];
     header.target[1] = _lamp.mac[1];
     header.target[2] = _lamp.mac[2];
@@ -299,6 +310,8 @@ void light::setPower(uint16_t level, uint32_t duration)
         _lightUdp.beginPacket(_broadcastIP, _lamp.port);
         _lightUdp.write(udpPacket, sizeof(udpPacket));
         _lightUdp.endPacket();
+        _msgSentTime = millis();
+        _msgSent = true;
     }
 
     #if _DEBUG > 2

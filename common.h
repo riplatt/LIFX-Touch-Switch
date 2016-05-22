@@ -6,24 +6,30 @@
     #include <stdlib.h>
     #include <cmath>
     #include "application.h"
+    #include <vector>
     
-    #define _DEBUG true
+    #define _DEBUG 3
     //#define Serial if(_DEBUG)Serial
 
+    extern uint16_t _waitingForMsg;
+    extern uint32_t _myID;
+    extern uint32_t _msgSentTime;
+    extern bool _msgSent;
+        
     struct _fingerPosition
     {
         uint8_t finger;
         
-        uint32_t fristTouchTime;
-        uint16_t fristX;
-        uint16_t fristY;
+        //uint32_t fristTouchTime;
+        //uint16_t fristX;
+       // uint16_t fristY;
         
         uint16_t x;
         uint16_t y;
         
-        uint32_t lastTouchTime;
-        uint16_t lastX;
-        uint16_t lastY;
+        //uint32_t lastTouchTime;
+        //uint16_t lastX;
+        //uint16_t lastY;
     };
     
     struct touchScreenEvent
@@ -72,5 +78,7 @@
         _lightSetPower = 117,            // Sent to change the light power level.
         _lightStatePower = 118
     };
+    
+
 
 #endif
