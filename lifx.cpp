@@ -30,89 +30,146 @@ void lifx::setRemotePort(uint16_t remotePort)
 
 void lifx::discover()
 {
-    Serial.printlnf("lifx discover...");
-    _device.getPower();
+    Serial.printlnf(Time.timeStr() + " - lifx discover...");
+	_device.getPower();
 }
 
 void lifx::addLight(uint8_t mac[6], uint32_t port)
 {
-    Serial.printlnf("lifx addLight...");
+    // Serial.printlnf("lifx addLight...");
     int i;
     bool found = false;
-    
-    for (i = 0; i < numberOfLights - 1; i++)
+
+    for(auto &Light : Lights)
     {
-        if (Lights[i].matchMac(mac))
+        Serial.printlnf(Time.timeStr() + " - lifx addLight...Looking for MAC: 0x %02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+        if (Light.matchMac(mac))
         {
             found = true;
             break;
         }
     }
-    
+    Serial.printlnf(Time.timeStr() + " - lifx addLight...Already in Vector: %s", (found ?  "true" : "false"));
     if(found == false)
     {
         light _light = light();
-        
-        Lights.push_back (_light);
-        
-        Lights[numberOfLights].setMAC(mac);
-        Lights[numberOfLights].setPort(port);
-        Lights[numberOfLights].setUDP(_lifxUdp);
-        Lights[numberOfLights].setBroadcastIP(_broadcastIP);
-        Lights[numberOfLights].setRemotePort(_remotePort);
 
-        numberOfLights++;
+        Lights.push_back (_light);
+
+        if(Lights.empty() == false)
+        {
+            Lights.back().setMAC(mac);
+            Lights.back().setPort(port);
+            Lights.back().setUDP(_lifxUdp);
+            Lights.back().setBroadcastIP(_broadcastIP);
+            Lights.back().setRemotePort(_remotePort);
+        }
     }
-    Serial.printlnf("lifx addLight...Number of Lights: %d", numberOfLights);
+    Serial.printlnf(Time.timeStr() + " - lifx addLight... Size of Vector: %d", Lights.size());
 }
 /*
 * remove and resort array
 */
 void lifx::removeLight(uint8_t mac[6])
 {
-    Serial.printlnf("lifx removeLight...");
-    int index = numberOfLights;
+    // Serial.printlnf("lifx removeLight...");
+    int index = 0;
     int i;
     bool found = false;
-    
-    for (i = 0; i <= numberOfLights - 1; i++)
+
+    if(Lights.size() == 1)
     {
-        if (Lights[i].matchMac(mac))
+        Lights.clear();
+    } else {
+        for(auto &Light : Lights)
         {
-            index = i;
-            found = true;
-            break;
+            if (Light.matchMac(mac))
+            {
+                index = i;
+                found = true;
+                break;
+            }
+            index++;
+        }
+
+        if(found == true)
+        {
+            Lights.erase(Lights.begin() + index);
         }
     }
-    
-    if(found == true)
-    {
-        Lights.erase(Lights.begin() + index);
-        numberOfLights--;
-    }
-
-    Serial.printlnf("lifx removedLight...Number of Lights: %d, index: %d", numberOfLights, index);
+    Serial.printlnf(Time.timeStr() + " - lifx removedLight... Size of Vector: %d", Lights.size());
 }
 
 void lifx::togglePower()
 {
-    for(int i = 0; i < numberOfLights; i++)
+    for(auto &Light : Lights)
     {
-        uint16_t level = Lights[i].getPowerLevel();
-        Serial.printlnf("lifx togglePower... Light: %d, Current Power Level %d", i, level);
+        uint16_t level = Light.getPowerLevel();
+        // Serial.printlnf("lifx togglePower... Light: %d, Current Power Level %d", i, level);
         level = level == 65535 ? 0 : 65535;
-        Lights[i].setPower(level);
+        Light.setPower(level);
     }
 }
 
 void lifx::toggleColor()
 {
-
+    HSBK _hsbk;
+    bool _colorMode;
+    for(auto &Light : Lights)
+    {
+        _hsbk = Light.getHSBK();
+        if(_hsbk.saturation > 0)
+        {
+            Light.setLastColorHSBK(_hsbk);
+            _hsbk.saturation = 0;
+            _colorMode = false;
+        } else {
+            Light.setLastWhiteHSBK(_hsbk);
+            _hsbk.saturation = 65535;
+            _colorMode = true;
+            Light.setLastColorHSBK(_hsbk);
+        }
+        Light.setColorMode(_colorMode);
+        Light.setColor(_hsbk);
+    }
 }
 
-void lifx::cycleColor()
+void lifx::cycleColor(float step)
 {
+    Serial.printlnf(Time.timeStr() + " - Cycle Colour, Step:%0.2f", step);
+    HSBK _hsbk;
+    float _hue;
+    float _kelvin;
+    for(auto &Light : Lights)
+    {
+        _hsbk = Light.getHSBK();
 
+        if(Light.getColorMode() == true)
+        {
+           //0 - 65535 := 0 - 100%
+           _hue = _hsbk.hue - (65535 * (step/100.00));
+           // range limit
+            if (_hue > 65535)
+            {
+                _hue = 0 + (_hue - 65535);
+            } else if (_hue < 0) {
+                _hue = 65535 + _hue;
+            }
+            _hsbk.hue = (uint16_t)_hue;
+        } else {
+           // 2500 - 9000
+           _kelvin = _hsbk.kelvin - (6500 * (step/100.00));
+           // range limit
+            if (_kelvin > 9000)
+            {
+                _kelvin = 9000;
+            } else if (_kelvin < 2500) {
+                _kelvin = 2500;
+            }
+            _hsbk.kelvin = (uint16_t)_kelvin;
+        }
+        Light.setColor(_hsbk);
+    }
 }
 
 void lifx::dimLights(float step)
@@ -120,27 +177,29 @@ void lifx::dimLights(float step)
     //65535
     HSBK _hsbk;
     float _brightness;
-    for(int i = 0; i < numberOfLights; i++)
+    for(auto &Light : Lights)
     {
-        _hsbk = Lights[i].getHSBK();
+       _hsbk = Light.getHSBK();
         //0 - 65535 := 0 - 100%
         _brightness = _hsbk.brightness - (65535 * (step/100.00));
+        // range limit
         if (_brightness > 65535)
         {
             _brightness = 65535;
         } else if (_brightness < 0) {
             _brightness = 0;
         }
+        // send new brightness
         _hsbk.brightness = (uint16_t)_brightness;
-        Lights[i].setColor(_hsbk);
+        Light.setColor(_hsbk);
     }
 }
 
 void lifx::getStatus()
 {
-    for(int i = 0; i < numberOfLights; i++)
+    for(auto &Light : Lights)
     {
-        Lights[i].get();
+        Light.get();
     }
 }
 
@@ -171,9 +230,9 @@ void lifx::msgIn(byte packetBuffer[128])
     uint64_t lifxReservedC  = (packetBuffer[24] + (packetBuffer[25] << 4) + (packetBuffer[26] << 8) + (packetBuffer[27] << 12)) + ((packetBuffer[28] + (packetBuffer[29] << 4) + (packetBuffer[30] << 8) + (packetBuffer[31] << 12)) << 16);
     uint16_t lifxPacketType = packetBuffer[32] + (packetBuffer[33] << 8);
     uint16_t lifxReservedD  = packetBuffer[34] + (packetBuffer[35] << 8);
-    
-    Serial.printlnf("   PacketType: %d", lifxPacketType);
-    
+
+    // Serial.printlnf("   PacketType: %d", lifxPacketType);
+
         #if (_DEBUG > 2)
             Serial.println("Header:");
             Serial.println("  Frame:");
@@ -194,25 +253,25 @@ void lifx::msgIn(byte packetBuffer[128])
             Serial.printlnf("   ReservedA: %d", lifxReservedC);
             Serial.printlnf("   PacketType: %d", lifxPacketType);
             Serial.printlnf("   ReservedD: %d", lifxReservedD);
-            
+
             Serial.println("Payload:");
         #endif
-    
+
         switch (lifxPacketType)
         {
             case _deviceStateService:
-            {    
+            {
                 uint8_t _service;
                 uint32_t _port;
-                
+
                 _service = packetBuffer[36];
                 _port = packetBuffer[37] + (packetBuffer[38] << 8) + (packetBuffer[39] << 16) + (packetBuffer[40] << 24);
-                
+
                 #if (_DEBUG > 2)
                     Serial.printlnf("   Service: %d", _service);
                     Serial.printlnf("   Port: %d", _port);
                 #endif
-                
+
                 _waitingForMsg = 0;
                 if(lifxSource = _myID)
                 {
@@ -221,15 +280,15 @@ void lifx::msgIn(byte packetBuffer[128])
                 break;
             }
             case _deviceStatePower:
-            {    
+            {
                 uint16_t _level;
-                
+
                 _level = packetBuffer[36] + (packetBuffer[37] << 8);
-                
+
                 #if (_DEBUG > 2)
                     Serial.printlnf("   Level: %d", _level);
                 #endif
-                
+
                 _waitingForMsg = 0;
                 if(lifxSource = _myID)
                 {
@@ -240,7 +299,7 @@ void lifx::msgIn(byte packetBuffer[128])
                     mac[3] = lifxTarget[3];
                     mac[4] = lifxTarget[4];
                     mac[5] = lifxTarget[5];
-                    
+
                     if(_level > 0)
                     {
                         addLight(mac, 56700);
@@ -256,30 +315,30 @@ void lifx::msgIn(byte packetBuffer[128])
                 uint32_t _tx;
                 uint32_t _rx;
                 uint16_t _reserved;
-                
+
                 _signal     =   packetBuffer[36] + (packetBuffer[37] << 8) + (packetBuffer[38] << 16) + (packetBuffer[39] << 24);
                 _tx         =   packetBuffer[40] + (packetBuffer[41] << 8) + (packetBuffer[42] << 16) + (packetBuffer[43] << 24);
                 _rx         =   packetBuffer[44] + (packetBuffer[45] << 8) + (packetBuffer[46] << 16) + (packetBuffer[47] << 24);
                 _reserved   =   packetBuffer[48] + (packetBuffer[49] << 8);
-                
+
                 #if (_DEBUG > 2)
                     Serial.printlnf("   Signal: %d", _signal);
                     Serial.printlnf("   Tx: %d", _tx);
                     Serial.printlnf("   Rx: %d", _rx);
                     Serial.printlnf("   Reserved: %d", _reserved);
                 #endif
-                
+
                 uint8_t mac[6] = {lifxTarget[0], lifxTarget[1], lifxTarget[2], lifxTarget[3], lifxTarget[4], lifxTarget[5]};
-                
-                for (uint8_t i = 0; i < numberOfLights; i++)
+
+                for(auto &Light : Lights)
                 {
-                    if (Lights[i].matchMac(mac))
-                    {
-                        Lights[i].setSignal(_signal);
-                        Lights[i].setTx(_tx);
-                        Lights[i].setRx(_rx);
-                        //Lights[i].setReserved(_reserved);
-                    }
+                  if (Light.matchMac(mac))
+                  {
+                      Light.setSignal(_signal);
+                      Light.setTx(_tx);
+                      Light.setRx(_rx);
+                      //Lights[i].setReserved(_reserved);
+                  }
                 }
                 break;
             }
@@ -287,11 +346,11 @@ void lifx::msgIn(byte packetBuffer[128])
             {
                 uint64_t _payload;
                 _payload = (packetBuffer[36] + (packetBuffer[37] << 4) + (packetBuffer[38] << 8) + (packetBuffer[39] << 12)) + ((packetBuffer[40] + (packetBuffer[41] << 4) + (packetBuffer[42] << 8) + (packetBuffer[43] << 12)) << 16);
-                
+
                 #if (_DEBUG > 2)
                     Serial.printlnf("   Payload: %ll", _payload);
                 #endif
-                
+
                 break;
             }
             case _lightStatePower:          // Sent by a device to provide the current power level.
@@ -299,17 +358,17 @@ void lifx::msgIn(byte packetBuffer[128])
                 uint16_t _level;
                 uint8_t _mac[6] = {lifxTarget[0], lifxTarget[1], lifxTarget[2], lifxTarget[3], lifxTarget[4], lifxTarget[5]};
                 _level = packetBuffer[36] + (packetBuffer[37] << 8);
-                
+
                 #if (_DEBUG > 2)
                     Serial.printlnf("   Level: %d", _level);
                 #endif
-                
-                for (uint8_t i = 0; i < numberOfLights; i++)
+
+                for(auto &Light : Lights)
                 {
-                    if (Lights[i].matchMac(_mac))
-                    {
-                        Lights[i].setPowerLevel(_level);
-                    }
+                  if (Light.matchMac(_mac))
+                  {
+                      Light.setPowerLevel(_level);
+                  }
                 }
                 break;
             }
@@ -318,10 +377,10 @@ void lifx::msgIn(byte packetBuffer[128])
                 HSBK _hsbk;
                 int16_t _reservedA;
                 uint16_t _power;
-                //string _lable;
+                String _lable;
                 uint64_t _reservedB;
                 uint8_t _mac[6] = {lifxTarget[0], lifxTarget[1], lifxTarget[2], lifxTarget[3], lifxTarget[4], lifxTarget[5]};
-                
+
                 _hsbk.hue           =   packetBuffer[36] + (packetBuffer[37] << 8);
                 _hsbk.saturation    =   packetBuffer[38] + (packetBuffer[39] << 8);
                 _hsbk.brightness    =   packetBuffer[40] + (packetBuffer[41] << 8);
@@ -329,12 +388,13 @@ void lifx::msgIn(byte packetBuffer[128])
                 _reservedA          =   packetBuffer[44] + (packetBuffer[45] << 8);
                 _power              =   packetBuffer[46] + (packetBuffer[47] << 8);
                 //_lable              =   packetBuffer[48] + (packetBuffer[49] << 8) + (packetBuffer[50] << 16) + (packetBuffer[51] << 24) + (packetBuffer[52] << 32) + (packetBuffer[53] << 40) + (packetBuffer[54] << 48) + (packetBuffer[55] << 56) + (packetBuffer[56] << 64) + (packetBuffer[57] << 72) + (packetBuffer[58] << 80) + (packetBuffer[59] << 88) + (packetBuffer[60] << 96) + (packetBuffer[61] << 104) + (packetBuffer[62] << 112) + (packetBuffer[63] << 120) + (packetBuffer[64] << 128) + (packetBuffer[65] << 136) + (packetBuffer[66] << 144) + (packetBuffer[67] << 152) + (packetBuffer[68] << 160) + (packetBuffer[69] << 168) + (packetBuffer[70] << 176) + (packetBuffer[71] << 184) + (packetBuffer[72] << 192) + (packetBuffer[73] << 200) + (packetBuffer[74] << 208) + (packetBuffer[75] << 216) + (packetBuffer[76] << 224) + (packetBuffer[77] << 232) + (packetBuffer[78] << 240) + (packetBuffer[79] << 248);
-                _reservedB          =   packetBuffer[80] + (packetBuffer[81] << 8) + (packetBuffer[82] << 16) + (packetBuffer[83] << 24) + (packetBuffer[84] << 32) + (packetBuffer[85] << 40) + (packetBuffer[86] << 48) + (packetBuffer[87] << 56); 
-                
+                _reservedB          =	packetBuffer[80] + (packetBuffer[81] << 8) + (packetBuffer[82] << 16) + (packetBuffer[83] << 24) + (packetBuffer[84] << 32) + (packetBuffer[85] << 40) + (packetBuffer[86] << 48) + (packetBuffer[87] << 56);
+
                 #if (_DEBUG > 2)
-                    Serial.printlnf("  Hue: %d", _hsbk.hue / (65535 / 359));
-                    Serial.printlnf("  Saturation: %d", (_hsbk.saturation / 65535) * 100);
-                    Serial.printlnf("  Brightness: %d", (_hsbk.brightness / 65535) * 100);
+                    Serial.printlnf("  Raw:- Hue:%d, Saturation:%d, Brightness:%d, Kelvin:%d", _hsbk.hue, _hsbk.saturation, _hsbk.brightness, _hsbk.kelvin);
+                    Serial.printlnf("  Hue: %0.2f", (float)(_hsbk.hue / (65535 / 359)));
+                    Serial.printlnf("  Saturation: %0.2f", ((float)_hsbk.saturation / 65535.00) * 100.00);
+                    Serial.printlnf("  Brightness: %0.2f", ((float)_hsbk.brightness / 65535.00) * 100.00);
                     Serial.printlnf("  Kelvin: %d", _hsbk.kelvin);
                     Serial.printlnf("  ReservedA: %d", _reservedA);
                     Serial.printlnf("  Power: %d", _power);
@@ -342,13 +402,13 @@ void lifx::msgIn(byte packetBuffer[128])
                     Serial.printlnf("  Lable Raw: 0x %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X", packetBuffer[48], packetBuffer[49], packetBuffer[50], packetBuffer[51], packetBuffer[52], packetBuffer[53], packetBuffer[54], packetBuffer[55], packetBuffer[56], packetBuffer[57], packetBuffer[58], packetBuffer[59], packetBuffer[60], packetBuffer[61], packetBuffer[62], packetBuffer[63], packetBuffer[64], packetBuffer[65], packetBuffer[66], packetBuffer[67], packetBuffer[68], packetBuffer[69], packetBuffer[70], packetBuffer[71], packetBuffer[72], packetBuffer[73], packetBuffer[74], packetBuffer[75], packetBuffer[76], packetBuffer[77], packetBuffer[78], packetBuffer[79]);
                     Serial.printlnf("  ReservedB: %d", _reservedB);
                 #endif
-                
-                for (uint8_t i = 0; i < numberOfLights; i++)
+
+                for(auto &Light : Lights)
                 {
-                    if (Lights[i].matchMac(_mac))
+                    if (Light.matchMac(_mac))
                     {
-                        Lights[i].setHSBK(_hsbk);
-                        Lights[i].setPowerLevel(_power);
+                        Light.setHSBK(_hsbk);
+                        Light.setPowerLevel(_power);
                     }
                 }
             }
@@ -371,7 +431,7 @@ void lifx::msgIn(byte packetBuffer[128])
                 Serial.printf("%02X ", packetBuffer[j]);
             }
             Serial.println("");
-            
+
             Serial.println("---");
         #endif
 }

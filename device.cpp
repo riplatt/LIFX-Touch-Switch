@@ -10,49 +10,49 @@ device::device()
 
 void device::setUDP(UDP &udpRef)
 {
-    Serial.printlnf("device setUDP...");
+    // Serial.printlnf("device setUDP...");
     _deviceUdp = udpRef;
 }
 
 void device::setBroadcastIP(IPAddress broadcastIP)
 {
-    Serial.printlnf("device setBroadcastIP...");
-    _broadcastIP = broadcastIP;   
+    // Serial.printlnf("device setBroadcastIP...");
+    _broadcastIP = broadcastIP;
 }
 void device::setRemotePort(uint16_t remotePort)
 {
-    Serial.printlnf("device setRemotePort...");
+    // Serial.printlnf("device setRemotePort...");
     _remotePort = remotePort;
 }
 
 void device::getService()
 {
-    //Serial.printlnf("device getService...");
+    // Serial.printlnf("device getService...");
     _waitingForMsg = _deviceStateService;
     /* header */
     Header header = Header();
     int headerSize = sizeof(header);
-    
+
     /* payload */
     // N/A
-    
+
     /* UDP Packet */
     uint8_t udpPacket[headerSize];
-    
+
     /* build header */
-    header.size = headerSize; 
-    //header.origin = 0;            
-    header.tagged = 1;            
-    header.addressable = 1;       
-    header.protocol = 1024;       
+    header.size = headerSize;
+    //header.origin = 0;
+    header.tagged = 1;
+    header.addressable = 1;
+    header.protocol = 1024;
     header.source = _myID;
     //header.target[0] = 0;
     //header.target[1] = 0;
     //header.target[2] = 0;
-    //header.target[3] = 0; 
-    //header.target[4] = 0; 
-    //header.target[5] = 0; 
-    //header.target[6] = 0; 
+    //header.target[3] = 0;
+    //header.target[4] = 0;
+    //header.target[5] = 0;
+    //header.target[6] = 0;
     //header.target[7] = 0;
     //header.reservedA[0] = 0;
     //header.reservedA[1] = 0;
@@ -67,19 +67,21 @@ void device::getService()
     //header.reservedC = 0;
     header.type = _deviceGetService;
     //header.reservedD = 0;
-    
+
     /* build payload */
     // N/A
-    
+
     /* build udp packet */
     memcpy(&udpPacket, &header, headerSize);
-    
+
     /* Send UDP Packet */
     // TODO
     if (WiFi.ready()) {
         _deviceUdp.beginPacket(_broadcastIP, _remotePort);
         _deviceUdp.write(udpPacket, sizeof(udpPacket));
         _deviceUdp.endPacket();
+        _msgSentTime = millis();
+        _msgSent = true;
     }
 
     #if _DEBUG
@@ -95,32 +97,32 @@ void device::getService()
 
 void device::getPower()
 {
-    //Serial.printlnf("device getPower...");
+    Serial.printlnf(Time.timeStr() + " - device getPower...");
     _waitingForMsg = _deviceStatePower;
     /* header */
     Header header = Header();
     int headerSize = sizeof(header);
-    
+
     /* payload */
     // N/A
-    
+
     /* UDP Packet */
     uint8_t udpPacket[headerSize];
-    
+
     /* build header */
-    header.size = headerSize; 
-    //header.origin = 0;            
-    header.tagged = 1;            
-    header.addressable = 1;       
-    header.protocol = 1024;       
+    header.size = headerSize;
+    //header.origin = 0;
+    header.tagged = 1;
+    header.addressable = 1;
+    header.protocol = 1024;
     header.source = _myID;
     //header.target[0] = 0;
     //header.target[1] = 0;
     //header.target[2] = 0;
-    //header.target[3] = 0; 
-    //header.target[4] = 0; 
-    //header.target[5] = 0; 
-    //header.target[6] = 0; 
+    //header.target[3] = 0;
+    //header.target[4] = 0;
+    //header.target[5] = 0;
+    //header.target[6] = 0;
     //header.target[7] = 0;
     //header.reservedA[0] = 0;
     //header.reservedA[1] = 0;
@@ -135,19 +137,21 @@ void device::getPower()
     //header.reservedC = 0;
     header.type = _deviceGetPower;
     //header.reservedD = 0;
-    
+
     /* build payload */
     // N/A
-    
+
     /* build udp packet */
     memcpy(&udpPacket, &header, headerSize);
-    
+
     /* Send UDP Packet */
     // TODO
     if (WiFi.ready()) {
         _deviceUdp.beginPacket(_broadcastIP, _remotePort);
         _deviceUdp.write(udpPacket, sizeof(udpPacket));
         _deviceUdp.endPacket();
+        _msgSentTime = millis();
+        _msgSent = true;
     }
 
     #if _DEBUG

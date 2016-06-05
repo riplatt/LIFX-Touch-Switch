@@ -3,10 +3,10 @@
  */
 #ifndef stateEngine_h
     #define stateEngine_h
-    
+
     /* includes */
     #include "common.h"
-    
+
         class stateEngine{
         public:
             /* Member Functions */
@@ -19,6 +19,8 @@
             bool getHold();
             bool getMovingXAxis();
             bool getMovingYAxis();
+            bool getMovingXAxis2();
+            bool getMovingYAxis2();
             float getDeltaXPercent();
             float getDeltaYPercent();
             bool getTap();
@@ -31,7 +33,7 @@
             /* Members */
             uint32_t lastUpdate;
 
-        
+
         private:
             /* Member Functions */
             void _update1();
@@ -42,7 +44,7 @@
             bool _testRelease();
             bool _testMovement();
             bool _testWaitTime();
-            
+
             /* Members */
             uint32_t _now;
             uint8_t _fingerCount;
@@ -57,8 +59,11 @@
 		    bool _moving;
 		    bool _movingYAxis;
 		    bool _movingXAxis;
+		    bool _movingYAxis2;
+		    bool _movingXAxis2;
 		    bool _claim;
 		    int16_t _state;
+		    int16_t _lastState;
 		    uint16_t _lastX1;
 		    uint16_t _lastY1;
 		    uint16_t _lastX2;
@@ -66,12 +71,16 @@
 		    uint32_t _lastTimeStamp;
 		    int16_t _deltaX;
             int16_t _deltaY;
+            int16_t _diffX;
+            int16_t _diffY;
             int16_t _deltaX1;
             int16_t _deltaY1;
             int16_t _deltaX2;
             int16_t _deltaY2;
             float _deltaXPercent;
             float _deltaYPercent;
+            float _diffXPercent;
+            float _diffYPercent;
             float _deltaTime;
             float _distance;
             float _angle;
@@ -85,7 +94,7 @@
             uint32_t _waitTime = 250;
             uint16_t _resolutionX = 400;
             uint16_t _resolutionY = 800;
-            
+
     };
-    
+
 #endif

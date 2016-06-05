@@ -3,10 +3,10 @@
  */
 #ifndef device_h
     #define device_h
-    
+
     /* includes */
     #include "common.h"
-    
+
     class device{
         public:
             /* Member Functions */
@@ -16,7 +16,7 @@
             void setRemotePort(uint16_t remotePort);
             void getService();
             void getPower();
-            
+
             /* Members */
             struct Header
             {
@@ -39,15 +39,15 @@
                 uint16_t type;
                 uint16_t reservedD;
             }__attribute__ ((__packed__));
-        
+
         private:
             /* Member Functions */
-            
+
             /* Members */
             UDP _deviceUdp;
             IPAddress _broadcastIP;
-            uint16_t _remotePort;
-            
+        	uint16_t _remotePort;
+
     };
 
 #endif

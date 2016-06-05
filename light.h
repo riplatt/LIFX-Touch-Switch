@@ -3,10 +3,10 @@
 */
 #ifndef _light_h
     #define _light_h
-      
+
     // includes
     #include "common.h"
-    
+
     class light{
         public:
             // Members
@@ -31,7 +31,7 @@
                 uint16_t type;
                 uint16_t reservedD;
             }__attribute__ ((__packed__));
-            
+
             struct Lamp {
                 uint8_t ip[4];
                 uint8_t mac[6];
@@ -48,10 +48,13 @@
                 uint64_t uptime;
                 uint64_t downtime;
                 HSBK hsbk;
+                HSBK lastWhiteHsbk;
+                HSBK lastColorHsbk;
+                bool colorMode;
                 float signal;
                 char lable[32];
             }__attribute__ ((__packed__));
-            
+
             // Member Functions
             light();
             // lifx Functions
@@ -76,21 +79,27 @@
             uint16_t getPowerLevel();
             void setHSBK(HSBK hsbk);
             HSBK getHSBK();
+            void setLastWhiteHSBK(HSBK hsbk);
+            HSBK getLastWhiteHSBK();
+            void setLastColorHSBK(HSBK hsbk);
+            HSBK getLastColorHSBK();
             void setSignal(float signal);
             float getSignal();
             void setTx(uint32_t tx);
             uint32_t getTx();
             void setRx(uint32_t rx);
             uint32_t getRx();
+            void setColorMode(bool mode);
+            bool getColorMode();
 
         private:
             Lamp _lamp;
             IPAddress _broadcastIP;
-            uint16_t _remotePort;
-            uint16_t _powerState;
-            UDP _lightUdp;
-            
-    
+        	uint16_t _remotePort;
+        	uint16_t _powerState;
+        	UDP _lightUdp;
+
+
     };
 
 #endif
