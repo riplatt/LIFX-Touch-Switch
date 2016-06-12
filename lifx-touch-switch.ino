@@ -1,130 +1,251 @@
+// This #include statement was automatically added by the Particle IDE.
+#include "stateEngine.h"
+
 #include "common.h"
 #include "gsl1680.h"
-#include "GestureRecognition.h"
+//#include "GestureRecognition.h"
+#include "stateEngine.h"
 #include "lifx.h"
+
 
 int WAKE = D4;
 int INTRPT = D2;
 int LED = D7;
 
+String myID;
+uint16_t _waitingForMsg = 0;
+uint32_t _myID = 69;
+bool _msgSent = false;
+uint32_t _msgSentTime = 0;
 bool led = false;
+bool Interrupt = false;
+bool colorToggled = false;
 uint32_t now;
+uint32_t lastMsgTime = 0;
+uint32_t lastInterrupt = 0;
+uint32_t lastGetService = 0;
+uint32_t lastStatus = 0;
+uint32_t lastStep = 0;
+/* UDP */
+uint16_t localPort = 56701;
+uint16_t remotePort = 56700;
+uint16_t udpPacketSize = 0;
+IPAddress broadcastIP;
 // Objects
-GestureRecognition GR = GestureRecognition();
+//GestureRecognition GR = GestureRecognition();
+stateEngine SE = stateEngine();
 gsl1680 GSL = gsl1680();
-lifx LIFX = lifx();
+lifx LIFX;
+UDP _udp;
 
 void setup() {
+
+    // Time setup for serial print
+   Time.zone(10.00);
+   Time.setFormat(TIME_FORMAT_ISO8601_FULL);
+
     Serial.begin(115200);
     delay(1000);
-    //Serial.println(WiFi.localIP());
-    Serial.println("Get Set...");
+
+    IPAddress myIP = WiFi.localIP();
+    Serial.printlnf(Time.timeStr() + "My IP:%d.%d.%d.%d", myIP[0], myIP[1], myIP[2], myIP[3]);
+
+    myID = System.deviceID();
+    // Serial.print("My ID: ");
+    // Serial.println(myID);
+
+    _myID = (myIP[3] & 0x000000FF);
+    // Serial.printlnf("My ID: %lu", (unsigned long)_myID);
+
+    broadcastIP = IPAddress(myIP[0], myIP[1], myIP[2], 255);
+
+    Serial.printlnf(Time.timeStr() + " - Get Set...");
     // Setup IO
+    pinMode(LED, OUTPUT);
     pinMode(WAKE, OUTPUT);
     pinMode(INTRPT, INPUT_PULLUP);
+
+    digitalWrite(LED, HIGH);
     // Initialise Objects
     GSL.initialise(WAKE);
-    GR.initialise();
-    
+    //GR.initialise();
+    SE.initialise();
+    // Serial.printlnf("Broadcast IP:%d.%d.%d.%d", broadcastIP[0], broadcastIP[1], broadcastIP[2], broadcastIP[3]);
+     // Start UDP
+    _udp.begin(remotePort);
+    _udp.joinMulticast(broadcastIP);
+
+    // Setup the LIFX object
+    LIFX = lifx();
+    LIFX.setUDP(_udp);
+    LIFX.setBroadcastIP(broadcastIP);
+    LIFX.setRemotePort(remotePort);
+
     //Setup Test Lamp
-    uint8_t mac[6];
-    HSBK hsbk = {42416, 49807, 25559, 9000};
-    
+    /*uint8_t mac[6];
     mac[0] = 0xD0;
     mac[1] = 0x73;
     mac[2] = 0xD5;
     mac[3] = 0x00;
     mac[4] = 0x07;
-    mac[5] = 0xBB;
-    
-    LIFX.addLight(mac, 56700);
-    
-    
-    Serial.println("Go...");
+    mac[5] = 0x43;*/
+    //HSBK hsbk = {42416, 49807, 25559, 9000};
+
+   // LIFX.addLight(mac, 56700);
+
+    Serial.printlnf(Time.timeStr() + " - Go...");
+    digitalWrite(LED, LOW);
+    //get status on start up.
+    LIFX.getStatus();
 }
 
 void loop() {
-  now = millis();
+    now = millis();
 
-  if(now-20 > GR.lastUpdate)
-  {
-    GR.update();
-  }
-
-  if(digitalRead(INTRPT) == HIGH) {
-    digitalWrite(LED, led);
-    led= !led;
-    bool success = GSL.readData();
-    if (success == 1)
+    // check wifi is up
+    if (WiFi.ready() == false)
     {
-     /* Serial.print("Finger Read... N# Finger: ");
-      Serial.print(GSL.event.numberOfFingers);
-      Serial.print(", @ ");
-      Serial.print(GSL.event.timeStamp);
-      Serial.println("");*/
-      GR.addEvent(GSL.event);
+        _udp.begin(remotePort);
+        _udp.joinMulticast(broadcastIP);
     }
-    if (!GR.tap && !GR.doubleTap && !GR.down && !GR.up && !GR.down2 && !GR.up2 && !GR.right && !GR.left && !GR.hold)
+
+    //update state engine
+    if(now - SE.lastUpdate > 100)
     {
-        Serial.printlnf("up: %d, down: %d, right: %d, left: %d, up2: %d, down2: %d, hold: %d, tap: %d, doubleTap: %d %d", GR.up, GR.down, GR.right, GR.left, GR.up2, GR.down2, GR.hold, GR.tap, GR.doubleTap, now);
+        SE.update(now);
     }
-  }
-  if (GR.tap || GR.doubleTap || GR.down || GR.up || GR.down2 || GR.up2 || GR.right || GR.left || GR.hold)
-  {
-    Serial.printf("up: %d, down: %d, right: %d, left: %d, up2: %d, down2: %d, hold: %d, tap: %d, doubleTap: %d", GR.up, GR.down, GR.right, GR.left, GR.up2, GR.down2, GR.hold, GR.tap, GR.doubleTap);
-    if (GR.tap)
-    {
-        Serial.print(" tap...");
-        LIFX.togglePower();
-        GR.tap = 0;
-    };
-    if (GR.doubleTap)
-    {
-        Serial.print(" doubleTap...");
-        LIFX.togglePower();
-        GR.doubleTap = 0;
-    };
-    if (GR.down)
-    {
-        Serial.printf(" down @ %dpix/s", GR.downSpeed);
-        GR.down = 0;
-    };
 
-    if (GR.up)
+    // Status Updates
+    if((now - lastStatus >= 30000) || ((_msgSent == true) && (now - _msgSentTime >= 1000)))
     {
-        Serial.printf(" up @ %dpix/s", GR.upSpeed);
-        GR.up = 0;
-    };
+        // Serial.printlnf("%lu - Status update...", now);
+        LIFX.getStatus();
+        lastStatus = now;
+        _msgSent = false;
+    }
 
-    if (GR.down2)
+    // ---- Actions ---- //
+    // Check for claiming
+    if (SE.getClaim() == true)
     {
-        Serial.printf(" down2 @ %dpix/s", GR.down2Speed);
-        GR.down2 = 0;
-    };
-    
-    if (GR.up2)
+        LIFX.discover();
+        if (now - lastMsgTime > 1000)
+        {
+            SE.setClaim(false);
+        }
+    }
+
+    // Check for tap
+    if (SE.getTap())
     {
-        Serial.printf(" up2 @ %dpix/s", GR.up2Speed);
-        GR.up2 = 0;
-    };
-    
-    if (GR.right)
+        // Tap action waiting
+        LIFX.togglePower();
+        SE.setTap(false);
+    }
+
+    // check for double tap
+    if (SE.getDoubleTap())
     {
-        Serial.printf(" right @ %dpix/s", GR.rightSpeed);
-        GR.right = 0;
-    };
-    
-    if (GR.left)
+        SE.setDoubleTap(false);
+    }
+
+    // check for Moving in the Y axis
+    if(SE.getMovingYAxis())
     {
-        Serial.printf(" left @ %dpix/s", GR.leftSpeed);
-        GR.left = 0;
-    };
-    
-    if (GR.hold)
+        if(now - lastStep >= 50)
+        {
+            LIFX.dimLights(SE.getDeltaYPercent());
+            lastStep = now;
+        }
+    }
+
+    // check for Moving in the X axis
+    if((SE.getMovingXAxis() == true) && (colorToggled == false))
     {
-        Serial.print(" holding...");
-        GR.hold = 0;
-    };
-    Serial.printlnf(" %d", now);
-  }
+        LIFX.toggleColor();
+        colorToggled = true;
+    } else if ((SE.getMovingXAxis() == false) && (colorToggled == true)) {
+        colorToggled = false;
+    }
+
+    // check for 2 fingers Moving in the Y axis
+    if(SE.getMovingYAxis2())
+    {
+        if(now - lastStep >= 50)
+        {
+            LIFX.cycleColor(SE.getDeltaYPercent());
+            lastStep = now;
+        }
+    }
+    // ---- End Actions ---- //
+
+    // Check if data has been received
+    udpPacketSize = _udp.parsePacket();
+    if (udpPacketSize > 0)
+    {
+        byte packetBuffer[128]; //buffer to hold incoming packet
+
+        // Read first 128 of data received
+        _udp.read(packetBuffer, 128);
+
+        // Ignore other chars
+        _udp.flush();
+
+        // Store sender ip and port
+        IPAddress senderIP = _udp.remoteIP();
+        int port = _udp.remotePort();
+        // Serial.printlnf("%lu - IP:%d.%d.%d.%d:%d", now, senderIP[0], senderIP[1], senderIP[2], senderIP[3], port);
+
+        // translate data
+        LIFX.msgIn(packetBuffer);
+        // Set last time we saw a msg
+        lastMsgTime = now;
+    }
+
+    // Check for touchscreen input data
+    if(digitalRead(INTRPT) == HIGH)
+    {
+
+        led = !led; //flick led
+        digitalWrite(LED, led);
+
+        bool success = GSL.readData();
+        if (success == 1)
+        {
+            int fCount = GSL.event.numberOfFingers;
+
+            if(fCount > 0) {
+                // Serial.printlnf("%lu - Touch%d:    ", now, fCount);
+            } else {
+                // Serial.printlnf("%lu - High Release: ", now);
+            }
+            Interrupt = true;
+            lastInterrupt = now;
+            SE.addEvent(GSL.event);
+        } else {
+            // Serial.println("Interrupt High: Failed Read...");
+        }
+    } else {
+        if(Interrupt == true && (now - 100 > lastInterrupt)) {
+
+            bool success = GSL.readData();
+            if (success == 1)
+            {
+                int fCount = GSL.event.numberOfFingers;
+
+                if(fCount > 0) {
+                    Interrupt = true;
+                    lastInterrupt = now;
+                } else {
+                    Interrupt = false;
+                }
+                // Serial.printlnf("%lu - Low Release: ", now);
+                SE.addEvent(GSL.event);
+            } else {
+                // Serial.println("Interrupt Low: Failed Read...");
+                Interrupt = true;
+                lastInterrupt = now;
+            }
+        }
+    }
 }

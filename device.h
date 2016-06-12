@@ -3,16 +3,20 @@
  */
 #ifndef device_h
     #define device_h
-    
+
     /* includes */
     #include "common.h"
-    
+
     class device{
         public:
             /* Member Functions */
             device();
+            void setUDP(UDP &udpRef);
+            void setBroadcastIP(IPAddress broadcastIP);
+            void setRemotePort(uint16_t remotePort);
             void getService();
-            
+            void getPower();
+
             /* Members */
             struct Header
             {
@@ -35,38 +39,15 @@
                 uint16_t type;
                 uint16_t reservedD;
             }__attribute__ ((__packed__));
-        
+
         private:
-        /* Members */
-        // _Udp;
-        // Stream *_serial;
-        
-        enum _msg{
-            _getService = 2,
-            _stateService = 3,
-            _getHostInfo = 12,
-            _stateHostInfo = 13,
-            _getHostFirmware = 14,
-            _stateHostFirmware = 15,
-            _getWifiInfo = 16,
-            _stateWifiInfo = 17,
-            _getWifiFirmware = 18,
-            _stateWifiFirmware = 19,
-            _getPower = 20,
-            _setPower = 21,
-            _statePower = 22,
-            _getLabel = 23,
-            _setLabel = 24,
-            _stateLabel = 25,
-            _getVersion = 32,
-            _stateVersion = 33,
-            _getInfo = 34,
-            _stateInfo = 35,
-            _acknowledgement = 45,
-            _echoRequest = 58,
-            _echoResponse = 59
-        };
-    
+            /* Member Functions */
+
+            /* Members */
+            UDP _deviceUdp;
+            IPAddress _broadcastIP;
+        	uint16_t _remotePort;
+
     };
 
 #endif
