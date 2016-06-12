@@ -224,7 +224,7 @@ void light::setColor(uint16_t hue, uint16_t saturation, uint16_t brightness, uin
     }
 
     #if _DEBUG > 1
-        Serial.printf("Sent:%d, Time:%lu, Light setPower - UDP: 0x", _msgSent, _msgSentTime);
+        Serial.printf(Time.timeStr() + "Light setColor - UDP: 0x");
         for(uint8_t i = 0; i < sizeof(udpPacket); i++)
         {
             Serial.printf("%02x ", udpPacket[i]);
@@ -315,7 +315,7 @@ void light::setPower(uint16_t level, uint32_t duration)
     }
 
     #if _DEBUG > 2
-        Serial.printf("Light setPower - UDP: 0x");
+        Serial.printf(Time.timeStr() + "Light setPower - UDP: 0x");
         for(uint8_t i = 0; i < sizeof(udpPacket); i++)
         {
             Serial.printf("%02X ", udpPacket[i]);
@@ -327,7 +327,7 @@ void light::setPower(uint16_t level, uint32_t duration)
 // Switch Functions
 bool light::matchMac(byte mac[6])
 {
-    for (int i = 0; i < 5; i++)
+    for (int i = 0; i < 6; i++)
     {
         if (_lamp.mac[i] != mac[i])
         {

@@ -53,6 +53,7 @@ void setup() {
     myID = System.deviceID();
     // Serial.print("My ID: ");
     // Serial.println(myID);
+    Serial.printlnf("EEPROM Length: %d", EEPROM.length());
 
     _myID = (myIP[3] & 0x000000FF);
     // Serial.printlnf("My ID: %lu", (unsigned long)_myID);
@@ -71,7 +72,7 @@ void setup() {
     //GR.initialise();
     SE.initialise();
     // Serial.printlnf("Broadcast IP:%d.%d.%d.%d", broadcastIP[0], broadcastIP[1], broadcastIP[2], broadcastIP[3]);
-     // Start UDP
+    // Start UDP
     _udp.begin(remotePort);
     _udp.joinMulticast(broadcastIP);
 
@@ -80,18 +81,6 @@ void setup() {
     LIFX.setUDP(_udp);
     LIFX.setBroadcastIP(broadcastIP);
     LIFX.setRemotePort(remotePort);
-
-    //Setup Test Lamp
-    /*uint8_t mac[6];
-    mac[0] = 0xD0;
-    mac[1] = 0x73;
-    mac[2] = 0xD5;
-    mac[3] = 0x00;
-    mac[4] = 0x07;
-    mac[5] = 0x43;*/
-    //HSBK hsbk = {42416, 49807, 25559, 9000};
-
-   // LIFX.addLight(mac, 56700);
 
     Serial.printlnf(Time.timeStr() + " - Go...");
     digitalWrite(LED, LOW);

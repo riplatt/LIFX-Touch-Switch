@@ -30,8 +30,8 @@ void lifx::setRemotePort(uint16_t remotePort)
 
 void lifx::discover()
 {
-    Serial.printlnf(Time.timeStr() + " - lifx discover...");
-	_device.getPower();
+  Serial.printlnf(Time.timeStr() + " - lifx discover...");
+  _device.getPower();
 }
 
 void lifx::addLight(uint8_t mac[6], uint32_t port)
@@ -52,52 +52,52 @@ void lifx::addLight(uint8_t mac[6], uint32_t port)
     Serial.printlnf(Time.timeStr() + " - lifx addLight...Already in Vector: %s", (found ?  "true" : "false"));
     if(found == false)
     {
-        light _light = light();
+      Serial.printlnf(Time.timeStr() + " - lifx addLight... Before: Size of Vector: %d, Bytes: %d", Lights.size(), (sizeof(Lights[0]) * Lights.size()));
+      light _light = light();
+      Lights.push_back (_light);
 
-        Lights.push_back (_light);
-
-        if(Lights.empty() == false)
-        {
-            Lights.back().setMAC(mac);
-            Lights.back().setPort(port);
-            Lights.back().setUDP(_lifxUdp);
-            Lights.back().setBroadcastIP(_broadcastIP);
-            Lights.back().setRemotePort(_remotePort);
-        }
+      if(Lights.empty() == false)
+      {
+        Lights.back().setMAC(mac);
+        Lights.back().setPort(port);
+        Lights.back().setUDP(_lifxUdp);
+        Lights.back().setBroadcastIP(_broadcastIP);
+        Lights.back().setRemotePort(_remotePort);
+      }
     }
-    Serial.printlnf(Time.timeStr() + " - lifx addLight... Size of Vector: %d", Lights.size());
+    Serial.printlnf(Time.timeStr() + " - lifx addLight... After: Size of Vector: %d, Bytes: %d", Lights.size(), (sizeof(Lights[0]) * Lights.size()));
 }
 /*
 * remove and resort array
 */
 void lifx::removeLight(uint8_t mac[6])
 {
-    // Serial.printlnf("lifx removeLight...");
-    int index = 0;
-    int i;
-    bool found = false;
+  // Serial.printlnf("lifx removeLight...");
+  Serial.printlnf(Time.timeStr() + " - lifx removeLight...Removing MAC: 0x %02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+  uint8_t _index;
+  bool found = false;
 
+  for(auto &Light : Lights)
+  {
+    if (Light.matchMac(mac))
+    {
+      found = true;
+      break;
+    }
+    _index++;
+  }
+
+  if(found == true)
+  {
     if(Lights.size() == 1)
     {
-        Lights.clear();
+      Lights.clear();
     } else {
-        for(auto &Light : Lights)
-        {
-            if (Light.matchMac(mac))
-            {
-                index = i;
-                found = true;
-                break;
-            }
-            index++;
-        }
-
-        if(found == true)
-        {
-            Lights.erase(Lights.begin() + index);
-        }
+      Lights.erase(Lights.begin() + _index);
     }
-    Serial.printlnf(Time.timeStr() + " - lifx removedLight... Size of Vector: %d", Lights.size());
+  }
+  
+  Serial.printlnf(Time.timeStr() + " - lifx removedLight... Size of Vector: %d", Lights.size());
 }
 
 void lifx::togglePower()
@@ -106,7 +106,7 @@ void lifx::togglePower()
     {
         uint16_t level = Light.getPowerLevel();
         // Serial.printlnf("lifx togglePower... Light: %d, Current Power Level %d", i, level);
-        level = level == 65535 ? 0 : 65535;
+        level = level > 0 ? 0 : 65535;
         Light.setPower(level);
     }
 }
@@ -136,7 +136,7 @@ void lifx::toggleColor()
 
 void lifx::cycleColor(float step)
 {
-    Serial.printlnf(Time.timeStr() + " - Cycle Colour, Step:%0.2f", step);
+    //Serial.printlnf(Time.timeStr() + " - Cycle Colour, Step:%0.2f", step);
     HSBK _hsbk;
     float _hue;
     float _kelvin;

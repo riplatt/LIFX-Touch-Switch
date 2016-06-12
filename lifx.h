@@ -14,8 +14,8 @@
         	/* Members Functions */
         	lifx();
         	void setUDP(UDP &udpRef);
-            void setBroadcastIP(IPAddress broadcastIP);
-            void setRemotePort(uint16_t remotePort);
+          void setBroadcastIP(IPAddress broadcastIP);
+          void setRemotePort(uint16_t remotePort);
         	void discover();					                // Find active lights
         	void addLight(uint8_t mac[6], uint32_t port);		// Add light to Lights vector by mac address
         	void removeLight(uint8_t mac[6]);	                // Remove light from Lights vector by mac address
