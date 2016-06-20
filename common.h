@@ -7,6 +7,7 @@
     #include <cmath>
     #include "application.h"
     #include <vector>
+    #include "lifxUDP.h"
 
     #define _DEBUG 3
     //#define Serial if(_DEBUG)Serial

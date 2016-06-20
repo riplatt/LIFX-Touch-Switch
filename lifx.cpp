@@ -10,7 +10,7 @@ lifx::lifx()
     _powerState = 0;
 }
 
-void lifx::setUDP(UDP &udpRef)
+void lifx::setUDP(lifxUDP *udpRef)
 {
     _lifxUdp = udpRef;
     _device.setUDP(_lifxUdp);
@@ -30,7 +30,7 @@ void lifx::setRemotePort(uint16_t remotePort)
 
 void lifx::discover()
 {
-  Serial.printlnf(Time.timeStr() + " - lifx discover...");
+  Serial.printlnf(Time.timeStr() + ":" + millis() + " - lifx discover...");
   _device.getPower();
 }
 
@@ -42,17 +42,17 @@ void lifx::addLight(uint8_t mac[6], uint32_t port)
 
     for(auto &Light : Lights)
     {
-        Serial.printlnf(Time.timeStr() + " - lifx addLight...Looking for MAC: 0x %02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+        Serial.printlnf(Time.timeStr() + ":" + millis() + " - lifx addLight...Looking for MAC: 0x %02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
         if (Light.matchMac(mac))
         {
             found = true;
             break;
         }
     }
-    Serial.printlnf(Time.timeStr() + " - lifx addLight...Already in Vector: %s", (found ?  "true" : "false"));
+    Serial.printlnf(Time.timeStr() + ":" + millis() + " - lifx addLight...Already in Vector: %s", (found ?  "true" : "false"));
     if(found == false)
     {
-      Serial.printlnf(Time.timeStr() + " - lifx addLight... Before: Size of Vector: %d, Bytes: %d", Lights.size(), (sizeof(Lights[0]) * Lights.size()));
+      Serial.printlnf(Time.timeStr() + ":" + millis() + " - lifx addLight... Before: Size of Vector: %d, Bytes: %d", Lights.size(), (sizeof(Lights[0]) * Lights.size()));
       light _light = light();
       Lights.push_back (_light);
 
@@ -65,7 +65,7 @@ void lifx::addLight(uint8_t mac[6], uint32_t port)
         Lights.back().setRemotePort(_remotePort);
       }
     }
-    Serial.printlnf(Time.timeStr() + " - lifx addLight... After: Size of Vector: %d, Bytes: %d", Lights.size(), (sizeof(Lights[0]) * Lights.size()));
+    Serial.printlnf(Time.timeStr() + ":" + millis() + " - lifx addLight... After: Size of Vector: %d, Bytes: %d", Lights.size(), (sizeof(Lights[0]) * Lights.size()));
 }
 /*
 * remove and resort array
@@ -73,7 +73,7 @@ void lifx::addLight(uint8_t mac[6], uint32_t port)
 void lifx::removeLight(uint8_t mac[6])
 {
   // Serial.printlnf("lifx removeLight...");
-  Serial.printlnf(Time.timeStr() + " - lifx removeLight...Removing MAC: 0x %02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+  Serial.printlnf(Time.timeStr() + ":" + millis() + " - lifx removeLight...Removing MAC: 0x %02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
   uint8_t _index;
   bool found = false;
 
@@ -96,8 +96,8 @@ void lifx::removeLight(uint8_t mac[6])
       Lights.erase(Lights.begin() + _index);
     }
   }
-  
-  Serial.printlnf(Time.timeStr() + " - lifx removedLight... Size of Vector: %d", Lights.size());
+
+  Serial.printlnf(Time.timeStr() + ":" + millis() + " - lifx removedLight... Size of Vector: %d", Lights.size());
 }
 
 void lifx::togglePower()
@@ -377,17 +377,20 @@ void lifx::msgIn(byte packetBuffer[128])
                 HSBK _hsbk;
                 int16_t _reservedA;
                 uint16_t _power;
+                std::vector<byte> _lableData;
                 String _lable;
                 uint64_t _reservedB;
                 uint8_t _mac[6] = {lifxTarget[0], lifxTarget[1], lifxTarget[2], lifxTarget[3], lifxTarget[4], lifxTarget[5]};
 
-                _hsbk.hue           =   packetBuffer[36] + (packetBuffer[37] << 8);
-                _hsbk.saturation    =   packetBuffer[38] + (packetBuffer[39] << 8);
-                _hsbk.brightness    =   packetBuffer[40] + (packetBuffer[41] << 8);
-                _hsbk.kelvin        =   packetBuffer[42] + (packetBuffer[43] << 8);
-                _reservedA          =   packetBuffer[44] + (packetBuffer[45] << 8);
-                _power              =   packetBuffer[46] + (packetBuffer[47] << 8);
-                //_lable              =   packetBuffer[48] + (packetBuffer[49] << 8) + (packetBuffer[50] << 16) + (packetBuffer[51] << 24) + (packetBuffer[52] << 32) + (packetBuffer[53] << 40) + (packetBuffer[54] << 48) + (packetBuffer[55] << 56) + (packetBuffer[56] << 64) + (packetBuffer[57] << 72) + (packetBuffer[58] << 80) + (packetBuffer[59] << 88) + (packetBuffer[60] << 96) + (packetBuffer[61] << 104) + (packetBuffer[62] << 112) + (packetBuffer[63] << 120) + (packetBuffer[64] << 128) + (packetBuffer[65] << 136) + (packetBuffer[66] << 144) + (packetBuffer[67] << 152) + (packetBuffer[68] << 160) + (packetBuffer[69] << 168) + (packetBuffer[70] << 176) + (packetBuffer[71] << 184) + (packetBuffer[72] << 192) + (packetBuffer[73] << 200) + (packetBuffer[74] << 208) + (packetBuffer[75] << 216) + (packetBuffer[76] << 224) + (packetBuffer[77] << 232) + (packetBuffer[78] << 240) + (packetBuffer[79] << 248);
+                _hsbk.hue           = packetBuffer[36] + (packetBuffer[37] << 8);
+                _hsbk.saturation    = packetBuffer[38] + (packetBuffer[39] << 8);
+                _hsbk.brightness    = packetBuffer[40] + (packetBuffer[41] << 8);
+                _hsbk.kelvin        = packetBuffer[42] + (packetBuffer[43] << 8);
+                _reservedA          = packetBuffer[44] + (packetBuffer[45] << 8);
+                _power              = packetBuffer[46] + (packetBuffer[47] << 8);
+                _lableData          = {packetBuffer[48], packetBuffer[49], packetBuffer[50], packetBuffer[51], packetBuffer[52], packetBuffer[53], packetBuffer[54], packetBuffer[55], packetBuffer[56], packetBuffer[57], packetBuffer[58], packetBuffer[59], packetBuffer[60], packetBuffer[61], packetBuffer[62], packetBuffer[63], packetBuffer[64], packetBuffer[65], packetBuffer[66], packetBuffer[67], packetBuffer[68], packetBuffer[69], packetBuffer[70], packetBuffer[71], packetBuffer[72], packetBuffer[73], packetBuffer[74], packetBuffer[75], packetBuffer[76], packetBuffer[77], packetBuffer[78], packetBuffer[79]};
+                std::string _lable2(_lableData.begin(), _lableData.end());
+                //_lable              = _lable2.data();
                 _reservedB          =	packetBuffer[80] + (packetBuffer[81] << 8) + (packetBuffer[82] << 16) + (packetBuffer[83] << 24) + (packetBuffer[84] << 32) + (packetBuffer[85] << 40) + (packetBuffer[86] << 48) + (packetBuffer[87] << 56);
 
                 #if (_DEBUG > 2)
@@ -398,8 +401,7 @@ void lifx::msgIn(byte packetBuffer[128])
                     Serial.printlnf("  Kelvin: %d", _hsbk.kelvin);
                     Serial.printlnf("  ReservedA: %d", _reservedA);
                     Serial.printlnf("  Power: %d", _power);
-                    //Serial.printlnf("  Lable: %s", _lable);
-                    Serial.printlnf("  Lable Raw: 0x %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X", packetBuffer[48], packetBuffer[49], packetBuffer[50], packetBuffer[51], packetBuffer[52], packetBuffer[53], packetBuffer[54], packetBuffer[55], packetBuffer[56], packetBuffer[57], packetBuffer[58], packetBuffer[59], packetBuffer[60], packetBuffer[61], packetBuffer[62], packetBuffer[63], packetBuffer[64], packetBuffer[65], packetBuffer[66], packetBuffer[67], packetBuffer[68], packetBuffer[69], packetBuffer[70], packetBuffer[71], packetBuffer[72], packetBuffer[73], packetBuffer[74], packetBuffer[75], packetBuffer[76], packetBuffer[77], packetBuffer[78], packetBuffer[79]);
+                    Serial.printlnf("  Lable: %s", _lable2.data());
                     Serial.printlnf("  ReservedB: %d", _reservedB);
                 #endif
 

@@ -1,9 +1,6 @@
 // This #include statement was automatically added by the Particle IDE.
-#include "stateEngine.h"
-
 #include "common.h"
 #include "gsl1680.h"
-//#include "GestureRecognition.h"
 #include "stateEngine.h"
 #include "lifx.h"
 
@@ -12,7 +9,7 @@ int WAKE = D4;
 int INTRPT = D2;
 int LED = D7;
 
-String myID;
+String _systemID;
 uint16_t _waitingForMsg = 0;
 uint32_t _myID = 69;
 bool _msgSent = false;
@@ -32,11 +29,10 @@ uint16_t remotePort = 56700;
 uint16_t udpPacketSize = 0;
 IPAddress broadcastIP;
 // Objects
-//GestureRecognition GR = GestureRecognition();
 stateEngine SE = stateEngine();
 gsl1680 GSL = gsl1680();
-lifx LIFX;
-UDP _udp;
+lifx LIFX = lifx();
+lifxUDP _lifxUDP = lifxUDP();
 
 void setup() {
 
@@ -48,19 +44,19 @@ void setup() {
     delay(1000);
 
     IPAddress myIP = WiFi.localIP();
-    Serial.printlnf(Time.timeStr() + "My IP:%d.%d.%d.%d", myIP[0], myIP[1], myIP[2], myIP[3]);
+    Serial.printlnf(Time.timeStr() + ":" + millis() + " - My IP:%d.%d.%d.%d", myIP[0], myIP[1], myIP[2], myIP[3]);
 
-    myID = System.deviceID();
-    // Serial.print("My ID: ");
-    // Serial.println(myID);
-    Serial.printlnf("EEPROM Length: %d", EEPROM.length());
+    _systemID = System.deviceID();
+    // Serial.print("System ID: ");
+    // Serial.println(_systemID);
+    Serial.printlnf(Time.timeStr() + ":" + millis() + " - EEPROM Length: %d", EEPROM.length());
 
     _myID = (myIP[3] & 0x000000FF);
     // Serial.printlnf("My ID: %lu", (unsigned long)_myID);
 
     broadcastIP = IPAddress(myIP[0], myIP[1], myIP[2], 255);
 
-    Serial.printlnf(Time.timeStr() + " - Get Set...");
+    Serial.printlnf(Time.timeStr() + ":" + millis() + " - Get Set...");
     // Setup IO
     pinMode(LED, OUTPUT);
     pinMode(WAKE, OUTPUT);
@@ -68,21 +64,21 @@ void setup() {
 
     digitalWrite(LED, HIGH);
     // Initialise Objects
+    // Start GSL1680 Chip
     GSL.initialise(WAKE);
-    //GR.initialise();
+    // Setup state engine
     SE.initialise();
     // Serial.printlnf("Broadcast IP:%d.%d.%d.%d", broadcastIP[0], broadcastIP[1], broadcastIP[2], broadcastIP[3]);
     // Start UDP
-    _udp.begin(remotePort);
-    _udp.joinMulticast(broadcastIP);
+    // Start UDP object for use with lamps
+    _lifxUDP.initialise(broadcastIP, remotePort);
 
     // Setup the LIFX object
-    LIFX = lifx();
-    LIFX.setUDP(_udp);
+    LIFX.setUDP(&_lifxUDP);
     LIFX.setBroadcastIP(broadcastIP);
     LIFX.setRemotePort(remotePort);
 
-    Serial.printlnf(Time.timeStr() + " - Go...");
+    Serial.printlnf(Time.timeStr() + ":" + millis() + " - Go...");
     digitalWrite(LED, LOW);
     //get status on start up.
     LIFX.getStatus();
@@ -92,10 +88,17 @@ void loop() {
     now = millis();
 
     // check wifi is up
-    if (WiFi.ready() == false)
+    if(WiFi.ready() == false)
     {
-        _udp.begin(remotePort);
-        _udp.joinMulticast(broadcastIP);
+        _lifxUDP.begin(remotePort);
+        //_udp.joinMulticast(broadcastIP);
+    }
+
+    // check to see if there are UDP commands to Send
+    if(_lifxUDP.available() == true)
+    {
+      Serial.printlnf(Time.timeStr() + ":" + millis() + " - UDP message available for sending...");
+      _lifxUDP.send();
     }
 
     //update state engine
@@ -169,20 +172,21 @@ void loop() {
     // ---- End Actions ---- //
 
     // Check if data has been received
-    udpPacketSize = _udp.parsePacket();
+    udpPacketSize = _lifxUDP.parsePacket();
     if (udpPacketSize > 0)
     {
+      Serial.printlnf("UDP packet size: %d", udpPacketSize);
         byte packetBuffer[128]; //buffer to hold incoming packet
 
         // Read first 128 of data received
-        _udp.read(packetBuffer, 128);
+        _lifxUDP.read(packetBuffer, 128);
 
         // Ignore other chars
-        _udp.flush();
+        _lifxUDP.flush();
 
         // Store sender ip and port
-        IPAddress senderIP = _udp.remoteIP();
-        int port = _udp.remotePort();
+        IPAddress senderIP = _lifxUDP.remoteIP();
+        int port = _lifxUDP.remotePort();
         // Serial.printlnf("%lu - IP:%d.%d.%d.%d:%d", now, senderIP[0], senderIP[1], senderIP[2], senderIP[3], port);
 
         // translate data

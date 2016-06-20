@@ -13,7 +13,7 @@
         public:
         	/* Members Functions */
         	lifx();
-        	void setUDP(UDP &udpRef);
+        	void setUDP(lifxUDP *udpRef);
           void setBroadcastIP(IPAddress broadcastIP);
           void setRemotePort(uint16_t remotePort);
         	void discover();					                // Find active lights
@@ -38,7 +38,8 @@
         	/* Members */
         	bool _powerState;					// 1 := Lights On, 0 := Lights Off
         	device _device;
-        	UDP _lifxUdp;
+        	//UDP _lifxUdp;
+          lifxUDP* _lifxUdp;
         	IPAddress _broadcastIP;
         	uint16_t _remotePort;
 

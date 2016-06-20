@@ -171,7 +171,7 @@ void stateEngine::update(uint32_t now)
 		    }
 			break;
 		case 2000:
-		    // Serial.printlnf("%lu -  State:%ld - Two Fingers...", _now, _state);
+		    Serial.printlnf(Time.timeStr() + ":" + millis() + " - State: %ld - Two Fingers...", _state);
 		    if((abs(_diffXPercent) >= 60.0) && (abs(_diffYPercent) >= 60.0))
 		    {
 		         _state = 2100;
@@ -189,14 +189,14 @@ void stateEngine::update(uint32_t now)
 		    }
 		    break;
 		case 2100:
-		    // Serial.printlnf("%lu -  State:%ld - Claim....", _now, _state);
+		    Serial.printlnf(Time.timeStr() + ":" + millis() + " - State: %ld - Claim....", _state);
 		    if(_testRelease() && _claim == false)
 		    {
                 _state = -1;
 		    }
 			break;
 		case 2300:
-		    Serial.printlnf(Time.timeStr() + " - State: %ld - Two Finger Moving...", _state);
+		    Serial.printlnf(Time.timeStr() + ":" + millis() + " - State: %ld - Two Finger Moving...", _state);
 		    if(abs(_deltaXPercent) > abs(_deltaYPercent))
 		    {
 		        _state = 2310;
@@ -241,7 +241,7 @@ void stateEngine::update(uint32_t now)
     }
     if(_state != _lastState)
     {
-        Serial.printlnf(Time.timeStr() + " - State: %ld", _state);
+        Serial.printlnf(Time.timeStr() + ":" + millis() + " - State: %ld", _state);
         _lastState = _state;
     }
 }

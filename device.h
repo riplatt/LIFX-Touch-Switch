@@ -11,7 +11,7 @@
         public:
             /* Member Functions */
             device();
-            void setUDP(UDP &udpRef);
+            void setUDP(lifxUDP *udpRef);
             void setBroadcastIP(IPAddress broadcastIP);
             void setRemotePort(uint16_t remotePort);
             void getService();
@@ -44,7 +44,7 @@
             /* Member Functions */
 
             /* Members */
-            UDP _deviceUdp;
+            lifxUDP* _deviceUdp;
             IPAddress _broadcastIP;
         	uint16_t _remotePort;
 

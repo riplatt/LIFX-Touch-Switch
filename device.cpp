@@ -8,7 +8,7 @@ device::device()
 
 };
 
-void device::setUDP(UDP &udpRef)
+void device::setUDP(lifxUDP *udpRef)
 {
     // Serial.printlnf("device setUDP...");
     _deviceUdp = udpRef;
@@ -76,16 +76,12 @@ void device::getService()
 
     /* Send UDP Packet */
     // TODO
-    if (WiFi.ready()) {
-        _deviceUdp.beginPacket(_broadcastIP, _remotePort);
-        _deviceUdp.write(udpPacket, sizeof(udpPacket));
-        _deviceUdp.endPacket();
-        _msgSentTime = millis();
-        _msgSent = true;
-    }
+    std::vector<byte> data(udpPacket, udpPacket + sizeof(udpPacket));
+    _deviceUdp->add(data);
+    Serial.printlnf(Time.timeStr() + ":" + millis() + " - Deivce getService - udpPacket size: %d", sizeof(udpPacket));
 
     #if _DEBUG
-        Serial.printf("Deivce getService - UDP: 0x");
+        Serial.printf(Time.timeStr() + ":" + millis() + " - Deivce getService - UDP: 0x");
         for(uint8_t i = 0; i < sizeof(udpPacket); i++ )
         {
             Serial.printf("%02x ", udpPacket[i]);
@@ -97,7 +93,7 @@ void device::getService()
 
 void device::getPower()
 {
-    Serial.printlnf(Time.timeStr() + " - device getPower...");
+    Serial.printlnf(Time.timeStr() + ":" + millis() + " - Device getPower...");
     _waitingForMsg = _deviceStatePower;
     /* header */
     Header header = Header();
@@ -145,17 +141,13 @@ void device::getPower()
     memcpy(&udpPacket, &header, headerSize);
 
     /* Send UDP Packet */
-    // TODO
-    if (WiFi.ready()) {
-        _deviceUdp.beginPacket(_broadcastIP, _remotePort);
-        _deviceUdp.write(udpPacket, sizeof(udpPacket));
-        _deviceUdp.endPacket();
-        _msgSentTime = millis();
-        _msgSent = true;
-    }
+    std::vector<byte> data(udpPacket, udpPacket + sizeof(udpPacket));
+    _deviceUdp->add(data);
+    //_deviceUdp.add(udpPacket);
+    Serial.printlnf(Time.timeStr() + ":" + millis() + " - Deivce getPower - udpPacket size: %d", sizeof(udpPacket));
 
     #if _DEBUG
-        Serial.printf("Deivce getPower - UDP: 0x");
+        Serial.printf(Time.timeStr() + ":" + millis() + " - Deivce getPower - UDP: 0x");
         for(uint8_t i = 0; i < sizeof(udpPacket); i++ )
         {
             Serial.printf("%02x ", udpPacket[i]);
@@ -163,4 +155,4 @@ void device::getPower()
         Serial.println("");
     #endif
 
-};
+}

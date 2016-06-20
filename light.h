@@ -64,7 +64,7 @@
       // Member Functions
       light();
       // lifx Functions
-      void setUDP(UDP &udpRef);
+      void setUDP(lifxUDP *udpRef);
       void setBroadcastIP(IPAddress broadcastIP);
       void setRemotePort(uint16_t remotePort);
       void setIP(uint8_t ip[4]);
@@ -104,6 +104,6 @@
       IPAddress _broadcastIP;
       uint16_t _remotePort;
       uint16_t _powerState;
-      UDP _lightUdp;
+      lifxUDP* _lightUdp;
   };
 #endif
