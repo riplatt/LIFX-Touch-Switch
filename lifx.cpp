@@ -136,14 +136,14 @@ void lifx::toggleColor()
 
 void lifx::cycleColor(float step)
 {
-    //Serial.printlnf(Time.timeStr() + " - Cycle Colour, Step:%0.2f", step);
+    Serial.printlnf(Time.timeStr() + ":" + millis() + " - Cycle Colour, Step: %0.4f", step);
     HSBK _hsbk;
     float _hue;
     float _kelvin;
     for(auto &Light : Lights)
     {
         _hsbk = Light.getHSBK();
-
+        Serial.printlnf(Time.timeStr() + ":" + millis() + " - Cycle Colour, Colour Mode: %s", Light.getColorMode() ? "Colour" : "Temperature" );
         if(Light.getColorMode() == true)
         {
            //0 - 65535 := 0 - 100%
@@ -174,7 +174,7 @@ void lifx::cycleColor(float step)
 
 void lifx::dimLights(float step)
 {
-    //65535
+    Serial.printlnf(Time.timeStr() + ":" + millis() + " - Dim Lights, Step: %0.4f", step);
     HSBK _hsbk;
     float _brightness;
     for(auto &Light : Lights)
@@ -272,7 +272,7 @@ void lifx::msgIn(byte packetBuffer[128])
                     Serial.printlnf("   Port: %d", _port);
                 #endif
 
-                _waitingForMsg = 0;
+                //_waitingForMsg = 0;
                 if(lifxSource = _myID)
                 {
                     // we sent the msg that this in response to
@@ -289,7 +289,7 @@ void lifx::msgIn(byte packetBuffer[128])
                     Serial.printlnf("   Level: %d", _level);
                 #endif
 
-                _waitingForMsg = 0;
+                //_waitingForMsg = 0;
                 if(lifxSource = _myID)
                 {
                     uint8_t mac[6];

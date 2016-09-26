@@ -9,7 +9,7 @@
     #include <vector>
     #include "lifxUDP.h"
 
-    #define _DEBUG 3
+    #define _DEBUG 0
     //#define Serial if(_DEBUG)Serial
 
     extern uint16_t _waitingForMsg;
@@ -79,7 +79,5 @@
         _lightSetPower = 117,            // Sent to change the light power level.
         _lightStatePower = 118
     };
-
-
 
 #endif

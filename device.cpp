@@ -28,7 +28,7 @@ void device::setRemotePort(uint16_t remotePort)
 void device::getService()
 {
     // Serial.printlnf("device getService...");
-    _waitingForMsg = _deviceStateService;
+    //_waitingForMsg = _deviceStateService;
     /* header */
     Header header = Header();
     int headerSize = sizeof(header);
@@ -94,7 +94,7 @@ void device::getService()
 void device::getPower()
 {
     Serial.printlnf(Time.timeStr() + ":" + millis() + " - Device getPower...");
-    _waitingForMsg = _deviceStatePower;
+    //_waitingForMsg = _deviceStatePower;
     /* header */
     Header header = Header();
     int headerSize = sizeof(header);
